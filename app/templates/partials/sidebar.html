@@ -1,0 +1,30 @@
+{% set nav_items = [
+  ("dashboard.index", "bi-speedometer2", "Dashboard"),
+  ("upload.index", "bi-cloud-arrow-up", "Data Upload"),
+  ("preprocessing.index", "bi-sliders", "Data Preprocessing"),
+  ("feature_engineering.index", "bi-diagram-3", "Feature Engineering"),
+  ("eda.index", "bi-bar-chart-line", "EDA Analysis"),
+  ("training.index", "bi-cpu", "Model Training"),
+  ("forecasting.index", "bi-graph-up-arrow", "Sales Forecasting"),
+  ("inventory.index", "bi-box-seam", "Inventory Optimization"),
+  ("reports.index", "bi-file-earmark-text", "Reports")
+] %}
+
+<aside class="sidebar">
+  <a class="brand" href="{{ url_for('dashboard.index') }}">
+    <span class="brand-mark">IS</span>
+    <span>
+      <strong>Sales Forecasting</strong>
+      <small>Decision Intelligence</small>
+    </span>
+  </a>
+
+  <nav class="nav flex-column sidebar-nav">
+    {% for endpoint, icon, label in nav_items %}
+      <a class="nav-link {% if request.endpoint == endpoint %}active{% endif %}" href="{{ url_for(endpoint) }}">
+        <i class="bi {{ icon }}"></i>
+        <span>{{ label }}</span>
+      </a>
+    {% endfor %}
+  </nav>
+</aside>

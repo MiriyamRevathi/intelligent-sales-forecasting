@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="content-panel">
+  <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-3">
+    <div>
+      <h2 class="h5 mb-1">Inventory Optimization</h2>
+      <p class="text-secondary mb-0">Uses reports/forecast_results.csv to calculate stock risk and reorder guidance.</p>
+    </div>
+  </div>
+
+  <form method="post" class="training-form" id="inventoryForm">
+    <div>
+      <label class="form-label" for="current_stock">Current Stock</label>
+      <input class="form-control" type="number" min="0" step="0.01" id="current_stock" name="current_stock" value="{{ form_values.current_stock }}" required>
+    </div>
+    <div>
+      <label class="form-label" for="lead_time_days">Lead Time in Days</label>
+      <input class="form-control" type="number" min="1" step="1" id="lead_time_days" name="lead_time_days" value="{{ form_values.lead_time_days }}" required>
+    </div>
+    <button class="btn btn-primary" type="submit" id="inventoryButton">
+      <i class="bi bi-box-seam me-2"></i>Optimize Inventory
+    </button>
+  </form>
+
+  <div class="training-progress d-none mt-4" id="inventoryProgress" aria-live="polite">
+    <div class="d-flex align-items-center gap-3">
+      <div class="spinner-border text-info" role="status" aria-hidden="true"></div>
+      <div>
+        <strong>Optimization in progress</strong>
+        <p class="text-secondary mb-0">Calculating safety stock, reorder point, demand coverage, and inventory risk.</p>
+      </div>
+    </div>
+    <div class="progress mt-3" role="progressbar" aria-label="Inventory optimization progress">
+      <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%">Optimizing</div>
+    </div>
+  </div>
+</section>
+
+{% if result %}
+<section class="content-panel">
+  <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+    <div>
+      <h2 class="h5 mb-1">Inventory Status</h2>
+      <p class="text-secondary mb-0">
+        Source: {{ result.report.source_file }} - Output: reports/{{ result.report_filename }}
+      </p>
+    </div>
+    <span class="badge text-bg-{{ result.report.classification_level }} fs-6">{{ result.report.classification }}</span>
+  </div>
+</section>
+
+<section class="metric-grid eda-kpi-grid">
+  {% for kpi in result.kpis %}
+    <div class="metric-card kpi-card">
+      <div>
+        <span>{{ kpi.label }}</span>
+        <strong>{{ kpi.value }}</strong>
+      </div>
+      <i class="bi {{ kpi.icon }}"></i>
+    </div>
+  {% endfor %}
+</section>
+
+<section class="content-panel">
+  <h2 class="h5 mb-3">Inventory Alerts</h2>
+  <div class="row g-3">
+    {% for alert in result.report.alerts %}
+      <div class="col-md-6 col-xl-4">
+        <div class="alert-card alert-card-{{ alert.level }}">
+          <i class="bi {{ alert.icon }}"></i>
+          <div>
+            <strong>{{ alert.title }}</strong>
+            <p class="mb-0">{{ alert.message }}</p>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="content-panel">
+  <h2 class="h5 mb-3">Demand Summary</h2>
+  <div class="table-responsive">
+    <table class="table table-dark table-hover align-middle mb-0">
+      <tbody>
+        <tr>
+          <th>Average Daily Demand</th>
+          <td>{{ result.report.average_daily_demand }}</td>
+        </tr>
+        <tr>
+          <th>Maximum Daily Demand</th>
+          <td>{{ result.report.maximum_daily_demand }}</td>
+        </tr>
+        <tr>
+          <th>Forecast Demand</th>
+          <td>{{ result.report.forecast_demand }}</td>
+        </tr>
+        <tr>
+          <th>Lead Time</th>
+          <td>{{ result.report.lead_time_days }} days</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="eda-chart-grid">
+  {% for chart in result.charts %}
+    <article class="chart-card">
+      <div class="chart-card-header">
+        <h2 class="h6 mb-0">{{ chart.title }}</h2>
+      </div>
+      <div class="plotly-chart" id="{{ chart.id }}"></div>
+    </article>
+  {% endfor %}
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const inventoryForm = document.querySelector("#inventoryForm");
+  const inventoryProgress = document.querySelector("#inventoryProgress");
+  const inventoryButton = document.querySelector("#inventoryButton");
+
+  if (inventoryForm) {
+    inventoryForm.addEventListener("submit", () => {
+      inventoryProgress.classList.remove("d-none");
+      inventoryButton.disabled = true;
+    });
+  }
+</script>
+
+{% if result %}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script>
+  const inventoryCharts = {{ result.charts | tojson }};
+  const plotlyConfig = {
+    responsive: true,
+    displaylogo: false,
+    scrollZoom: true,
+    toImageButtonOptions: {
+      format: "png",
+      filename: "inventory_optimization_chart",
+      height: 720,
+      width: 1200,
+      scale: 2
+    }
+  };
+
+  inventoryCharts.forEach((chart) => {
+    Plotly.newPlot(chart.id, chart.figure.data, chart.figure.layout, plotlyConfig);
+  });
+</script>
+{% endif %}
+{% endblock %}

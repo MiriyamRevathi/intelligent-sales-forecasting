@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="content-panel">
+  <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+    <div>
+      <h2 class="h5 mb-1">Executive Overview</h2>
+      <p class="text-secondary mb-0">Revenue, forecast performance, model quality, and inventory risk in one operational view.</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('reports.index') }}">
+      <i class="bi bi-file-earmark-arrow-down me-2"></i>Export Reports
+    </a>
+  </div>
+</section>
+
+<section class="metric-grid executive-kpi-grid">
+  {% for kpi in dashboard.kpis %}
+    <div class="metric-card kpi-card executive-kpi-card">
+      <div>
+        <span>{{ kpi.label }}</span>
+        <strong>{{ kpi.value }}</strong>
+      </div>
+      <i class="bi {{ kpi.icon }}"></i>
+    </div>
+  {% endfor %}
+</section>
+
+<section class="widget-grid">
+  {% for widget in dashboard.widgets %}
+    <div class="workflow-card dashboard-widget">
+      <i class="bi {{ widget.icon }}"></i>
+      <div>
+        <span>{{ widget.label }}</span>
+        <strong>{{ widget.value }}</strong>
+      </div>
+    </div>
+  {% endfor %}
+</section>
+
+{% if dashboard.notices %}
+<section class="content-panel">
+  <h2 class="h5 mb-3">Data Availability</h2>
+  <div class="list-group list-group-flush">
+    {% for notice in dashboard.notices %}
+      <div class="list-group-item bg-transparent text-warning px-0">
+        <i class="bi bi-info-circle me-2"></i>{{ notice }}
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if dashboard.charts %}
+<section class="eda-chart-grid">
+  {% for chart in dashboard.charts %}
+    <article class="chart-card">
+      <div class="chart-card-header">
+        <h2 class="h6 mb-0">{{ chart.title }}</h2>
+      </div>
+      <div class="plotly-chart" id="{{ chart.id }}"></div>
+    </article>
+  {% endfor %}
+</section>
+{% else %}
+<section class="content-panel">
+  <h2 class="h5 mb-1">No Charts Ready</h2>
+  <p class="text-secondary mb-0">Run feature engineering, model training, forecasting, and inventory optimization to populate the executive dashboard.</p>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if dashboard.charts %}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script>
+  const dashboardCharts = {{ dashboard.charts | tojson }};
+  const plotlyConfig = {
+    responsive: true,
+    displaylogo: false,
+    scrollZoom: true,
+    toImageButtonOptions: {
+      format: "png",
+      filename: "executive_dashboard_chart",
+      height: 720,
+      width: 1200,
+      scale: 2
+    }
+  };
+
+  dashboardCharts.forEach((chart) => {
+    Plotly.newPlot(chart.id, chart.figure.data, chart.figure.layout, plotlyConfig);
+  });
+</script>
+{% endif %}
+{% endblock %}

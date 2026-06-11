@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if not profile %}
+<section class="content-panel">
+  <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+    <div>
+      <h2 class="h5 mb-1">No Featured Dataset Ready</h2>
+      <p class="text-secondary mb-0">Run Feature Engineering to create processed/featured_dataset.csv.</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('feature_engineering.index') }}">
+      <i class="bi bi-diagram-3 me-2"></i>Open Feature Engineering
+    </a>
+  </div>
+</section>
+{% else %}
+<section class="content-panel">
+  <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-3">
+    <div>
+      <h2 class="h5 mb-1">Random Forest Training</h2>
+      <p class="text-secondary mb-0">
+        Source: processed/{{ profile.source_filename }} - {{ profile.row_count }} rows, {{ profile.column_count }} columns
+      </p>
+    </div>
+  </div>
+
+  <form method="post" class="training-form" id="trainingForm">
+    <div>
+      <label for="target_column" class="form-label">Target variable</label>
+      <select class="form-select" id="target_column" name="target_column" {% if not profile.numeric_columns %}disabled{% endif %}>
+        {% for column in profile.numeric_columns %}
+          <option value="{{ column }}" {% if column == selected_target %}selected{% endif %}>{{ column }}</option>
+        {% endfor %}
+      </select>
+      <div class="form-text">Revenue is selected by default when it exists. Any numeric column can be used as the target.</div>
+    </div>
+    <button class="btn btn-primary" type="submit" {% if not profile.numeric_columns %}disabled{% endif %} id="trainButton">
+      <i class="bi bi-cpu me-2"></i>Train Model
+    </button>
+  </form>
+
+  <div class="training-progress d-none mt-4" id="trainingProgress" aria-live="polite">
+    <div class="d-flex align-items-center gap-3">
+      <div class="spinner-border text-info" role="status" aria-hidden="true"></div>
+      <div>
+        <strong>Training in progress</strong>
+        <p class="text-secondary mb-0">Preparing data, fitting RandomForestRegressor, and generating evaluation charts.</p>
+      </div>
+    </div>
+    <div class="progress mt-3" role="progressbar" aria-label="Training progress">
+      <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%">Training</div>
+    </div>
+  </div>
+</section>
+
+<section class="content-panel">
+  <h2 class="h5 mb-3">Model Information</h2>
+  <div class="table-responsive">
+    <table class="table table-dark table-hover align-middle mb-0">
+      <tbody>
+        <tr>
+          <th>Algorithm</th>
+          <td>RandomForestRegressor</td>
+        </tr>
+        <tr>
+          <th>Train/Test Split</th>
+          <td>80/20</td>
+        </tr>
+        <tr>
+          <th>Estimator Settings</th>
+          <td>300 trees, max_depth=15, min_samples_split=5, min_samples_leaf=2, random_state=42, n_jobs=-1</td>
+        </tr>
+        <tr>
+          <th>Data Preparation</th>
+          <td>Numeric median imputation, categorical mode imputation, label encoding, unsupported column removal</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if result %}
+<section class="metric-grid">
+  <div class="metric-card">
+    <span>MAE</span>
+    <strong>{{ result.metrics.mae }}</strong>
+  </div>
+  <div class="metric-card">
+    <span>RMSE</span>
+    <strong>{{ result.metrics.rmse }}</strong>
+  </div>
+  <div class="metric-card">
+    <span>R2 Score</span>
+    <strong>{{ result.metrics.r2_score }}</strong>
+  </div>
+  <div class="metric-card">
+    <span>MAPE</span>
+    <strong>{{ result.metrics.mape }}%</strong>
+  </div>
+</section>
+
+<section class="metric-grid upload-summary-grid">
+  <div class="metric-card">
+    <span>Training Time</span>
+    <strong>{{ result.metrics.training_time_seconds }}s</strong>
+  </div>
+  <div class="metric-card">
+    <span>Feature Count</span>
+    <strong>{{ result.metrics.feature_count }}</strong>
+  </div>
+</section>
+
+<section class="content-panel">
+  <h2 class="h5 mb-3">Training Details</h2>
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="workflow-card align-items-start">
+        <i class="bi bi-list-check"></i>
+        <div>
+          <strong>Feature Columns</strong>
+          <p class="text-secondary mb-2">{{ result.feature_columns | length }} columns used</p>
+          <div class="column-chip-list">
+            {% for feature in result.feature_columns %}
+              <span class="column-chip">{{ feature }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="workflow-card align-items-start">
+        <i class="bi bi-save"></i>
+        <div>
+          <strong>Saved Artifacts</strong>
+          <div class="list-group list-group-flush mt-2">
+            {% for file in result.artifact_files %}
+              <div class="list-group-item bg-transparent text-light px-0">{{ file }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if result.metrics.dropped_columns %}
+    <div class="mt-4">
+      <h3 class="h6 mb-3">Removed Unsupported Columns</h3>
+      <div class="column-chip-list">
+        {% for column in result.metrics.dropped_columns %}
+          <span class="column-chip">{{ column }}</span>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</section>
+
+<section class="eda-chart-grid">
+  {% for chart in result.charts %}
+    <article class="chart-card">
+      <div class="chart-card-header">
+        <h2 class="h6 mb-0">{{ chart.title }}</h2>
+      </div>
+      <div class="plotly-chart" id="{{ chart.id }}"></div>
+    </article>
+  {% endfor %}
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const trainingForm = document.querySelector("#trainingForm");
+  const trainingProgress = document.querySelector("#trainingProgress");
+  const trainButton = document.querySelector("#trainButton");
+
+  if (trainingForm) {
+    trainingForm.addEventListener("submit", () => {
+      trainingProgress.classList.remove("d-none");
+      trainButton.disabled = true;
+    });
+  }
+</script>
+
+{% if result %}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script>
+  const trainingCharts = {{ result.charts | tojson }};
+  const plotlyConfig = {
+    responsive: true,
+    displaylogo: false,
+    scrollZoom: true,
+    toImageButtonOptions: {
+      format: "png",
+      filename: "model_training_chart",
+      height: 720,
+      width: 1200,
+      scale: 2
+    }
+  };
+
+  trainingCharts.forEach((chart) => {
+    Plotly.newPlot(chart.id, chart.figure.data, chart.figure.layout, plotlyConfig);
+  });
+</script>
+{% endif %}
+{% endblock %}

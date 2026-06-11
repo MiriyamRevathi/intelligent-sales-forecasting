@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if not dashboard %}
+<section class="content-panel">
+  <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+    <div>
+      <h2 class="h5 mb-1">No Featured Dataset Ready</h2>
+      <p class="text-secondary mb-0">Run Feature Engineering to create processed/featured_dataset.csv.</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('feature_engineering.index') }}">
+      <i class="bi bi-diagram-3 me-2"></i>Open Feature Engineering
+    </a>
+  </div>
+</section>
+{% else %}
+<section class="content-panel">
+  <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+    <div>
+      <h2 class="h5 mb-1">Exploratory Data Analysis</h2>
+      <p class="text-secondary mb-0">
+        Source: processed/{{ dashboard.source_filename }} - {{ dashboard.row_count }} rows, {{ dashboard.column_count }} columns
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="metric-grid eda-kpi-grid">
+  {% for kpi in dashboard.kpis %}
+    <div class="metric-card kpi-card">
+      <div>
+        <span>{{ kpi.label }}</span>
+        <strong>{{ kpi.value }}</strong>
+      </div>
+      <i class="bi {{ kpi.icon }}"></i>
+    </div>
+  {% endfor %}
+</section>
+
+<section class="content-panel">
+  <h2 class="h5 mb-3">Detected Columns</h2>
+  <div class="column-chip-list">
+    {% for label, value in dashboard.detected_columns.items() %}
+      <span class="column-chip">{{ label }}: {{ value }}</span>
+    {% endfor %}
+  </div>
+</section>
+
+{% if dashboard.notices %}
+<section class="content-panel">
+  <h2 class="h5 mb-3">Chart Notices</h2>
+  <div class="list-group list-group-flush">
+    {% for notice in dashboard.notices %}
+      <div class="list-group-item bg-transparent text-warning px-0">
+        <i class="bi bi-exclamation-triangle me-2"></i>{{ notice }}
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="eda-chart-grid">
+  {% for chart in dashboard.charts %}
+    <article class="chart-card">
+      <div class="chart-card-header">
+        <h2 class="h6 mb-0">{{ chart.title }}</h2>
+      </div>
+      <div class="plotly-chart" id="{{ chart.id }}"></div>
+    </article>
+  {% endfor %}
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if dashboard %}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script>
+  const edaCharts = {{ dashboard.charts | tojson }};
+  const plotlyConfig = {
+    responsive: true,
+    displaylogo: false,
+    scrollZoom: true,
+    modeBarButtonsToAdd: ["drawline", "drawopenpath", "eraseshape"],
+    toImageButtonOptions: {
+      format: "png",
+      filename: "eda_chart",
+      height: 720,
+      width: 1200,
+      scale: 2
+    }
+  };
+
+  edaCharts.forEach((chart) => {
+    Plotly.newPlot(chart.id, chart.figure.data, chart.figure.layout, plotlyConfig);
+  });
+</script>
+{% endif %}
+{% endblock %}

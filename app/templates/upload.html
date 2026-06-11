@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="content-panel">
+  <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-3">
+    <div>
+      <h2 class="h5 mb-1">Upload Dataset</h2>
+      <p class="text-secondary mb-0">Supported files: .xlsx, .xls, .json. Maximum size: {{ max_upload_size }}.</p>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="upload-form" id="uploadForm">
+    <div>
+      <label for="dataset" class="form-label">Excel or JSON dataset</label>
+      <input class="form-control" type="file" id="dataset" name="dataset" accept=".xlsx,.xls,.json" required>
+      <div class="form-text">The uploaded file is saved in the project uploads folder and parsed with Pandas.</div>
+    </div>
+    <button class="btn btn-primary" type="submit" id="uploadButton">
+      <i class="bi bi-upload me-2"></i>Upload File
+    </button>
+  </form>
+
+  <div class="upload-progress mt-4 d-none" id="uploadProgressWrap" aria-live="polite">
+    <div class="d-flex justify-content-between mb-2">
+      <span class="text-secondary">Upload progress</span>
+      <span id="uploadProgressLabel">0%</span>
+    </div>
+    <div class="progress" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100">
+      <div class="progress-bar progress-bar-striped progress-bar-animated" id="uploadProgressBar" style="width: 0%">0%</div>
+    </div>
+  </div>
+</section>
+
+{% if metadata %}
+<section class="content-panel">
+  <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-3">
+    <div>
+      <h2 class="h5 mb-1">Dataset Summary</h2>
+      <p class="text-secondary mb-0">{{ metadata.filename }} · {{ metadata.file_size }}</p>
+    </div>
+  </div>
+
+  <section class="metric-grid upload-summary-grid">
+    <div class="metric-card">
+      <span>Total Rows</span>
+      <strong>{{ metadata.total_rows }}</strong>
+    </div>
+    <div class="metric-card">
+      <span>Total Columns</span>
+      <strong>{{ metadata.total_columns }}</strong>
+    </div>
+  </section>
+
+  <div class="mb-4">
+    <h3 class="h6 mb-3">Column Names</h3>
+    <div class="column-chip-list">
+      {% for column in metadata.column_names %}
+        <span class="column-chip">{{ column }}</span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div>
+    <h3 class="h6 mb-3">First 10 Records</h3>
+    {% if metadata.preview_records %}
+      <div class="table-responsive preview-table-wrap">
+        <table class="table table-dark table-striped table-hover table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              {% for column in metadata.column_names %}
+                <th scope="col">{{ column }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for record in metadata.preview_records %}
+              <tr>
+                {% for column in metadata.column_names %}
+                  <td>{{ record[column] }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-secondary mb-0">The uploaded dataset has no previewable records.</p>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+<section class="content-panel">
+  <h2 class="h5 mb-3">Uploaded Files</h2>
+  {% if files %}
+    <div class="list-group list-group-flush">
+      {% for file in files %}
+        <div class="list-group-item bg-transparent text-light px-0 d-flex align-items-center gap-2">
+          <i class="bi bi-file-earmark-spreadsheet text-info"></i>
+          <span>{{ file }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-secondary mb-0">No files uploaded yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

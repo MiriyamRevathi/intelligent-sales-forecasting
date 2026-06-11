@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if not summary %}
+<section class="content-panel">
+  <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+    <div>
+      <h2 class="h5 mb-1">No Dataset Ready</h2>
+      <p class="text-secondary mb-0">Upload a valid Excel or JSON dataset before running preprocessing.</p>
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('upload.index') }}">
+      <i class="bi bi-cloud-arrow-up me-2"></i>Upload Dataset
+    </a>
+  </div>
+</section>
+{% else %}
+<section class="content-panel">
+  <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+    <div>
+      <h2 class="h5 mb-1">Preprocessing Summary</h2>
+      <p class="text-secondary mb-0">
+        Source: {{ source_filename }} - Output: processed/{{ cleaned_filename }}
+      </p>
+    </div>
+    <form method="post" action="{{ url_for('preprocessing.run') }}">
+      <button class="btn btn-primary" type="submit">
+        <i class="bi bi-arrow-repeat me-2"></i>Run Again
+      </button>
+    </form>
+  </div>
+</section>
+
+<section class="metric-grid">
+  <div class="metric-card">
+    <span>Original Rows</span>
+    <strong>{{ summary.original_rows }}</strong>
+  </div>
+  <div class="metric-card">
+    <span>Final Rows</span>
+    <strong>{{ summary.final_rows }}</strong>
+  </div>
+  <div class="metric-card">
+    <span>Missing Fixed</span>
+    <strong>{{ summary.missing_values_fixed }}</strong>
+  </div>
+  <div class="metric-card">
+    <span>Duplicates Removed</span>
+    <strong>{{ summary.duplicate_rows_removed }}</strong>
+  </div>
+</section>
+
+<section class="content-panel">
+  <h2 class="h5 mb-3">Before vs After Statistics</h2>
+  <div class="table-responsive">
+    <table class="table table-dark table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Before</th>
+          <th>After</th>
+          <th>Change</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Rows</td>
+          <td>{{ summary.original_rows }}</td>
+          <td>{{ summary.final_rows }}</td>
+          <td>-{{ summary.duplicate_rows_removed }}</td>
+        </tr>
+        <tr>
+          <td>Columns</td>
+          <td>{{ summary.original_columns }}</td>
+          <td>{{ summary.final_columns }}</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>Missing Values</td>
+          <td>{{ summary.original_missing_values }}</td>
+          <td>{{ summary.final_missing_values }}</td>
+          <td>-{{ summary.missing_values_fixed }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="content-panel">
+  <h2 class="h5 mb-3">Date Columns Detected</h2>
+  {% if summary.date_columns_detected %}
+    <div class="column-chip-list">
+      {% for column in summary.date_columns_detected %}
+        <span class="column-chip"><i class="bi bi-calendar-check me-2 text-info"></i>{{ column }}</span>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-secondary mb-0">No date-like columns were detected.</p>
+  {% endif %}
+</section>
+
+<section class="content-panel">
+  <h2 class="h5 mb-3">Data Quality Report</h2>
+  <div class="table-responsive preview-table-wrap">
+    <table class="table table-dark table-striped table-hover table-sm align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Column</th>
+          <th>Original Type</th>
+          <th>Final Type</th>
+          <th>Missing Before</th>
+          <th>Missing After</th>
+          <th>Fill Method</th>
+          <th>Date Column</th>
+          <th>Type Check</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in summary.data_types %}
+          <tr>
+            <td>{{ item.column }}</td>
+            <td>{{ item.original_dtype }}</td>
+            <td>{{ item.final_dtype }}</td>
+            <td>{{ item.missing_before }}</td>
+            <td>{{ item.missing_after }}</td>
+            <td>{{ item.fill_method }}</td>
+            <td>
+              {% if item.date_detected %}
+                <span class="badge text-bg-info">Yes</span>
+              {% else %}
+                <span class="badge text-bg-secondary">No</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.type_issue == "Valid" %}
+                <span class="badge text-bg-success">Valid</span>
+              {% else %}
+                <span class="badge text-bg-warning">{{ item.type_issue }}</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="content-panel">
+  <h2 class="h5 mb-3">Cleaned Dataset Preview</h2>
+  {% if summary.preview_records %}
+    <div class="table-responsive preview-table-wrap">
+      <table class="table table-dark table-striped table-hover table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            {% for column in summary.column_names %}
+              <th>{{ column }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in summary.preview_records %}
+            <tr>
+              {% for column in summary.column_names %}
+                <td>{{ record[column] }}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-secondary mb-0">No preview rows are available after preprocessing.</p>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

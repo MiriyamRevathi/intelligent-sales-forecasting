@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="content-panel">
+  <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+    <div>
+      <h2 class="h5 mb-1">Reports Export Center</h2>
+      <p class="text-secondary mb-0">Generate PDF and Excel reports from forecasts, inventory analysis, and model metrics.</p>
+    </div>
+  </div>
+</section>
+
+<section class="row g-3 mb-3">
+  {% for report in report_options %}
+    <div class="col-lg-6">
+      <article class="content-panel h-100 mb-0">
+        <div class="d-flex align-items-start gap-3">
+          <i class="bi {{ report.icon }} text-info fs-3"></i>
+          <div class="flex-grow-1">
+            <h2 class="h5 mb-1">{{ report.title }}</h2>
+            <p class="text-secondary mb-3">{{ report.description }}</p>
+            <form method="post" action="{{ url_for('reports.generate') }}" class="report-generate-form">
+              <input type="hidden" name="report_type" value="{{ report.type }}">
+              <button class="btn btn-primary" type="submit">
+                <i class="bi bi-download me-2"></i>Generate Report
+              </button>
+            </form>
+          </div>
+        </div>
+      </article>
+    </div>
+  {% endfor %}
+</section>
+
+<section class="content-panel">
+  <h2 class="h5 mb-3">Report Generation Status</h2>
+  <div class="training-progress d-none" id="reportProgress" aria-live="polite">
+    <div class="d-flex align-items-center gap-3">
+      <div class="spinner-border text-info" role="status" aria-hidden="true"></div>
+      <div>
+        <strong>Generating report</strong>
+        <p class="text-secondary mb-0">Building export file and saving it under reports/exports.</p>
+      </div>
+    </div>
+    <div class="progress mt-3" role="progressbar" aria-label="Report generation progress">
+      <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%">Generating</div>
+    </div>
+  </div>
+  <p class="text-secondary mb-0" id="reportIdle">Choose a report type above to generate a fresh export.</p>
+</section>
+
+<section class="content-panel">
+  <h2 class="h5 mb-3">Report History</h2>
+  {% if history %}
+    <div class="table-responsive">
+      <table class="table table-dark table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Size</th>
+            <th>Generated</th>
+            <th class="text-end">Download</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for file in history %}
+            <tr>
+              <td><i class="bi bi-file-earmark-arrow-down me-2 text-info"></i>{{ file.filename }}</td>
+              <td>{{ file.size_kb }} KB</td>
+              <td>{{ file.modified }}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-info" href="{{ url_for('reports.download', filename=file.filename) }}">
+                  <i class="bi bi-download me-1"></i>Download
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-secondary mb-0">No exported reports yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const reportForms = document.querySelectorAll(".report-generate-form");
+  const reportProgress = document.querySelector("#reportProgress");
+  const reportIdle = document.querySelector("#reportIdle");
+
+  reportForms.forEach((form) => {
+    form.addEventListener("submit", () => {
+      reportProgress.classList.remove("d-none");
+      reportIdle.classList.add("d-none");
+      form.querySelector("button").disabled = true;
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="content-panel">
+  <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-3">
+    <div>
+      <h2 class="h5 mb-1">Generate Sales Forecast</h2>
+      <p class="text-secondary mb-0">Uses the trained Random Forest model and processed/featured_dataset.csv.</p>
+    </div>
+  </div>
+
+  <form method="post" class="training-form" id="forecastForm">
+    <div>
+      <label class="form-label" for="horizon_days">Forecast period</label>
+      <select class="form-select" id="horizon_days" name="horizon_days">
+        {% for horizon in horizons %}
+          <option value="{{ horizon }}" {% if horizon == selected_horizon %}selected{% endif %}>{{ horizon }} Days</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-primary" type="submit" id="forecastButton">
+      <i class="bi bi-magic me-2"></i>Generate Forecast
+    </button>
+  </form>
+
+  <div class="training-progress d-none mt-4" id="forecastProgress" aria-live="polite">
+    <div class="d-flex align-items-center gap-3">
+      <div class="spinner-border text-info" role="status" aria-hidden="true"></div>
+      <div>
+        <strong>Forecast generation in progress</strong>
+        <p class="text-secondary mb-0">Generating future dates, aligning model features, and predicting revenue.</p>
+      </div>
+    </div>
+    <div class="progress mt-3" role="progressbar" aria-label="Forecast progress">
+      <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%">Forecasting</div>
+    </div>
+  </div>
+</section>
+
+{% if result %}
+<section class="content-panel">
+  <h2 class="h5 mb-3">Forecast Information</h2>
+  <div class="column-chip-list">
+    <span class="column-chip">Source: {{ result.source_filename }}</span>
+    <span class="column-chip">Output: reports/{{ result.output_filename }}</span>
+    <span class="column-chip">Latest Date: {{ result.latest_historical_date }}</span>
+    <span class="column-chip">Target: {{ result.target_column }}</span>
+    <span class="column-chip">Features: {{ result.feature_count }}</span>
+  </div>
+</section>
+
+<section class="metric-grid eda-kpi-grid">
+  {% for kpi in result.kpis %}
+    <div class="metric-card kpi-card">
+      <div>
+        <span>{{ kpi.label }}</span>
+        <strong>{{ kpi.value }}</strong>
+      </div>
+      <i class="bi {{ kpi.icon }}"></i>
+    </div>
+  {% endfor %}
+</section>
+
+<section class="eda-chart-grid">
+  {% for chart in result.charts %}
+    <article class="chart-card">
+      <div class="chart-card-header">
+        <h2 class="h6 mb-0">{{ chart.title }}</h2>
+      </div>
+      <div class="plotly-chart" id="{{ chart.id }}"></div>
+    </article>
+  {% endfor %}
+</section>
+
+<section class="content-panel">
+  <h2 class="h5 mb-3">Forecast Table</h2>
+  <div class="table-responsive preview-table-wrap">
+    <table class="table table-dark table-striped table-hover table-sm align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Forecast Revenue</th>
+          <th>Year</th>
+          <th>Month</th>
+          <th>Weekday</th>
+          <th>Quarter</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in result.table %}
+          <tr>
+            <td>{{ row.date }}</td>
+            <td>{{ row.forecast_revenue }}</td>
+            <td>{{ row.year }}</td>
+            <td>{{ row.month }}</td>
+            <td>{{ row.weekday }}</td>
+            <td>{{ row.quarter }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const forecastForm = document.querySelector("#forecastForm");
+  const forecastProgress = document.querySelector("#forecastProgress");
+  const forecastButton = document.querySelector("#forecastButton");
+
+  if (forecastForm) {
+    forecastForm.addEventListener("submit", () => {
+      forecastProgress.classList.remove("d-none");
+      forecastButton.disabled = true;
+    });
+  }
+</script>
+
+{% if result %}
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script>
+  const forecastCharts = {{ result.charts | tojson }};
+  const plotlyConfig = {
+    responsive: true,
+    displaylogo: false,
+    scrollZoom: true,
+    toImageButtonOptions: {
+      format: "png",
+      filename: "sales_forecast_chart",
+      height: 720,
+      width: 1200,
+      scale: 2
+    }
+  };
+
+  forecastCharts.forEach((chart) => {
+    Plotly.newPlot(chart.id, chart.figure.data, chart.figure.layout, plotlyConfig);
+  });
+</script>
+{% endif %}
+{% endblock %}
